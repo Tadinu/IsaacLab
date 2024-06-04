@@ -79,6 +79,7 @@ class InHandManipulationEnv(DirectRLEnv):
     def _setup_scene(self):
         # add hand, in-hand object, and goal object
         self.hand = Articulation(self.cfg.robot_cfg)
+        self._robot = self.hand
         self.object = RigidObject(self.cfg.object_cfg)
         # add ground plane
         spawn_ground_plane(prim_path="/World/ground", cfg=GroundPlaneCfg())
