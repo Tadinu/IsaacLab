@@ -5,4 +5,7 @@
 
 """Manipulation environments for fixed-arm robots."""
 
+from .cabinet import *
+from .inhand import *
+from .lift import *
 from .reach import *  # noqa
