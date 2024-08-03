@@ -23,7 +23,7 @@ from typing import Any, Literal
 with contextlib.suppress(ModuleNotFoundError):
     import isaacsim  # noqa: F401
 
-from omni.isaac.kit import SimulationApp
+from isaacsim import SimulationApp
 
 
 class AppLauncher:
