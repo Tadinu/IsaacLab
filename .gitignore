@@ -1,6 +1,7 @@
 ACTIVATE_ISAAC_LAB_ENV.sh
 ACTIVATE_ISAAC_ENV.sh
 conda_envs/
+docs/
 # C++
 **/cmake-build*/
 **/build*/

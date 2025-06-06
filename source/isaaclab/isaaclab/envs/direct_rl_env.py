@@ -197,6 +197,8 @@ class DirectRLEnv(gym.Env):
         self.reset_terminated = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
         self.reset_time_outs = torch.zeros_like(self.reset_terminated)
         self.reset_buf = torch.zeros(self.num_envs, dtype=torch.bool, device=self.sim.device)
+        self.reward_buf = torch.zeros(self.num_envs, dtype=torch.float, device=self.sim.device)
+        self.cost = torch.zeros(self.num_envs, dtype=torch.float, device=self.sim.device)
 
         # setup the action and observation spaces for Gym
         self._configure_gym_env_spaces()
@@ -390,6 +392,7 @@ class DirectRLEnv(gym.Env):
         self.reset_terminated[:], self.reset_time_outs[:] = self._get_dones()
         self.reset_buf = self.reset_terminated | self.reset_time_outs
         self.reward_buf = self._get_rewards()
+        self.cost = self._get_cost()
 
         # -- reset envs that terminated/timed-out and log the episode information
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
@@ -692,6 +695,15 @@ class DirectRLEnv(gym.Env):
             The rewards for the environment. Shape is (num_envs,).
         """
         raise NotImplementedError(f"Please implement the '_get_rewards' method for {self.__class__.__name__}.")
+
+    @abstractmethod
+    def _get_cost(self) -> torch.Tensor:
+        """Compute and return the cost for the environment.
+
+        Returns:
+            The cost for the environment. Shape is (num_envs,).
+        """
+        raise NotImplementedError(f"Please implement the '_get_cost' method for {self.__class__.__name__}.")
 
     @abstractmethod
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:

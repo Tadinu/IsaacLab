@@ -97,7 +97,7 @@ class InHandManipulationEnv(DirectRLEnv):
 
     def _apply_action(self) -> None:
         self.cur_targets[:, self.actuated_dof_indices] = scale(
-            self.actions,
+            self.actions[:, self.actuated_dof_indices],
             self.hand_dof_lower_limits[:, self.actuated_dof_indices],
             self.hand_dof_upper_limits[:, self.actuated_dof_indices],
         )
@@ -176,6 +176,23 @@ class InHandManipulationEnv(DirectRLEnv):
             self._reset_target_pose(goal_env_ids)
 
         return total_reward
+
+    def _get_cost(self) -> torch.Tensor:
+        return compute_cost(
+            self.object_pos,
+            self.object_rot,
+            self.in_hand_pos,
+            self.goal_rot,
+            self.cfg.dist_reward_scale,
+            self.cfg.rot_reward_scale,
+            self.cfg.rot_eps,
+            self.actions,
+            self.cfg.action_penalty_scale,
+            self.cfg.success_tolerance,
+            self.cfg.reach_goal_bonus,
+            self.cfg.fall_dist,
+            self.cfg.fall_penalty,
+        )
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         self._compute_intermediate_values()
@@ -432,3 +449,46 @@ def compute_rewards(
     )
 
     return reward, goal_resets, successes, cons_successes
+
+@torch.jit.script
+def compute_cost(
+    object_pos: torch.Tensor,
+    object_rot: torch.Tensor,
+    target_pos: torch.Tensor,
+    target_rot: torch.Tensor,
+    dist_cost_scale: float,
+    rot_cost_scale: float,
+    rot_eps: float,
+    actions: torch.Tensor,
+    action_penalty_scale: float,
+    success_tolerance: float,
+    reach_goal_bonus: float,
+    fall_dist: float,
+    fall_penalty: float,
+):
+    goal_dist = torch.norm(object_pos - target_pos, p=2, dim=-1)
+    rot_dist = rotation_distance(object_rot, target_rot)
+
+    dist_cost = goal_dist * dist_cost_scale
+    rot_cost = 1.0 / (torch.abs(rot_dist) + rot_eps) * rot_cost_scale
+
+    action_penalty = torch.sum(actions**2, dim=-1)
+
+    # Total cost is: position distance + orientation alignment + action regularization + success bonus + fall penalty
+    cost = dist_cost + rot_cost + action_penalty * action_penalty_scale
+
+    # constants to control sharpness of transition
+    k_rot = 50.0  # sharpness for rotation criterion
+    k_dist = 50.0  # sharpness for distance criterion
+
+    # smooth indicator for goal orientation (≈ 1 if |rot_dist| ≤ tol, else ≈ 0)
+    goal_indicator = torch.sigmoid(-k_rot * (torch.abs(rot_dist) - success_tolerance))
+
+    # smooth success bonus
+    cost += reach_goal_bonus * goal_indicator
+
+    # smooth fall penalty: indicator ≈ 1 when goal_dist ≥ fall_dist
+    goal_dist_safety = goal_dist - fall_dist
+    fall_indicator = torch.sigmoid(k_dist * goal_dist_safety)
+    cost += fall_penalty * fall_indicator
+    return cost
