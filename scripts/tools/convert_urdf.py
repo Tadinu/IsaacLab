@@ -37,15 +37,19 @@ from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Utility to convert a URDF into USD format.")
-parser.add_argument("input", type=str, help="The path to the input URDF file.")
-parser.add_argument("output", type=str, help="The path to store the USD file.")
+parser.add_argument("--input", type=str,
+                    default="/media/ducthan/376b23a1-5a02-4960-b3ca-24b2fcef8f891/3_COGNITIVE_ROBOT/cognarai/src/cognarai/mpc/mfr/models/cuboid_insertion/short_cuboid.urdf",
+                    help="The path to the input URDF file.")
+parser.add_argument("--output", type=str,
+                    default="/media/ducthan/376b23a1-5a02-4960-b3ca-24b2fcef8f891/3_COGNITIVE_ROBOT/cognarai/src/cognarai/mpc/mfr/models/cuboid_insertion/short_cuboid.usd",
+                    help="The path to store the USD file.")
 parser.add_argument(
     "--merge-joints",
     action="store_true",
     default=False,
     help="Consolidate links that are connected by fixed joints.",
 )
-parser.add_argument("--fix-base", action="store_true", default=False, help="Fix the base to where it is imported.")
+parser.add_argument("--fix-base", action="store_true", default=True, help="Fix the base to where it is imported.")
 parser.add_argument(
     "--joint-stiffness",
     type=float,
